@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gift Tracker</title>
+  <style>
+    :root { --bg:#0b0c10; --card:#14161d; --muted:#9aa3b2; --text:#f3f5f7; --line:#232735; --btn:#2a2f40; --ok:#2ea043; --warn:#d29922; }
+    * { box-sizing: border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    body { margin:0; background:var(--bg); color:var(--text); }
+    header { padding:16px 16px 8px; position:sticky; top:0; background:linear-gradient(to bottom, rgba(11,12,16,.98), rgba(11,12,16,.7)); backdrop-filter: blur(10px); border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:18px; letter-spacing:.2px; }
+    .tabs { display:flex; gap:8px; margin-top:10px; }
+    .tab { flex:1; padding:10px 12px; border:1px solid var(--line); background:var(--btn); border-radius:12px; color:var(--text); cursor:pointer; }
+    .tab.active { outline:2px solid rgba(255,255,255,.08); }
+    main { padding:16px; max-width:980px; margin:0 auto; }
+    .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media (min-width: 860px){ .grid { grid-template-columns: 1.2fr .8fr; } }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; }
+    .row { display:flex; gap:10px; align-items:center; }
+    .row.wrap { flex-wrap:wrap; }
+    label { font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+    input, select, textarea { width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:#0f1118; color:var(--text); }
+    textarea { min-height: 90px; resize: vertical; }
+    button { padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:var(--btn); color:var(--text); cursor:pointer; }
+    button.primary { background:#1f6feb; border-color:#1f6feb; }
+    button.danger { background:#3a1f24; border-color:#5a2a32; }
+    .muted { color:var(--muted); font-size:13px; }
+    .list { display:flex; flex-direction:column; gap:8px; }
+    .item { padding:12px; border-radius:14px; border:1px solid var(--line); background:#10131b; }
+    .item h3 { margin:0 0 6px; font-size:14px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); font-size:12px; }
+    .pill.ok { color:#bff5c9; border-color: rgba(46,160,67,.35); }
+    .pill.warn { color:#ffe7b3; border-color: rgba(210,153,34,.35); }
+    .pill.info { color:#c7d2fe; border-color: rgba(99,102,241,.35); }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .divider { height:1px; background:var(--line); margin:10px 0; }
+    .right { margin-left:auto; }
+    .kpi { display:flex; gap:10px; flex-wrap:wrap; }
+    .kpi .box { flex:1; min-width:160px; padding:10px 12px; border-radius:14px; border:1px solid var(--line); background:#0f121a; }
+    .kpi .val { font-size:18px; margin-top:4px; }
+    .small { font-size:12px; color:var(--muted); }
+    a { color:#7dd3fc; text-decoration:none; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Gift Tracker</h1>
+  <div class="tabs">
+    <button class="tab active" data-view="dashboard">Dashboard</button>
+    <button class="tab" data-view="people">People</button>
+    <button class="tab" data-view="gifts">Gifts</button>
+  </div>
+</header>
+
+<main>
+  <!-- DASHBOARD -->
+  <section id="view-dashboard" class="grid">
+    <div class="card">
+      <h2 style="margin:0 0 10px;font-size:16px;">Upcoming</h2>
+      <div class="row wrap">
+        <div style="flex:1; min-width:200px;">
+          <label>Show next</label>
+          <select id="upcomingWindow">
+            <option value="30">30 days</option>
+            <option value="60" selected>60 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </div>
+        <div class="right"></div>
+        <button id="addDemo" title="Adds a few sample people & gifts">Add demo data</button>
+      </div>
+      <div class="divider"></div>
+      <div id="upcomingList" class="list"></div>
+      <p class="muted" style="margin-top:10px;">Tip: add birthdays on the People tab — they’ll show here automatically.</p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px;font-size:16px;">Quick add gift</h2>
+      <div class="row wrap">
+        <div style="flex:1; min-width:220px;">
+          <label>Person</label>
+          <select id="qaPerson"></select>
+        </div>
+        <div style="flex:1; min-width:180px;">
+          <label>Occasion</label>
+          <select id="qaOccasion">
+            <option>Birthday</option>
+            <option>Holiday</option>
+            <option>Anniversary</option>
+            <option>Wedding</option>
+            <option>Baby</option>
+            <option>Just because</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>Gift idea / notes</label>
+        <textarea id="qaNote" placeholder="e.g., ‘nice chef’s knife’ or link + why it fits"></textarea>
+      </div>
+      <div class="row wrap" style="margin-top:10px;">
+        <div style="flex:1; min-width:160px;">
+          <label>Target date</label>
+          <input id="qaDate" type="date" />
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <label>Estimated cost (optional)</label>
+          <input id="qaCost" type="number" min="0" step="0.01" placeholder="0.00" />
+        </div>
+      </div>
+      <div class="row wrap" style="margin-top:10px;">
+        <div style="flex:1;">
+          <label>Link (optional)</label>
+          <input id="qaLink" type="url" placeholder="https://…" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="qaSave">Save gift</button>
+        <button id="exportJson">Export JSON</button>
+        <button id="importJson">Import JSON</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+      </div>
+      <div class="divider"></div>
+      <div class="kpi">
+        <div class="box">
+          <div class="small">Gifts this year</div>
+          <div class="val" id="kpiGifts">0</div>
+        </div>
+        <div class="box">
+          <div class="small">Spent this year (Given)</div>
+          <div class="val" id="kpiSpent">$0</div>
+        </div>
+        <div class="box">
+          <div class="small">Ideas waiting</div>
+          <div class="val" id="kpiIdeas">0</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PEOPLE -->
+  <section id="view-people" style="display:none;">
+    <div class="card">
+      <div class="row wrap">
+        <div style="flex:1; min-width:220px;">
+          <h2 style="margin:0;font-size:16px;">People</h2>
+          <div class="muted">Birthdays + notes + gift history.</div>
+        </div>
+        <div style="flex:1; min-width:220px;">
+          <label>Search</label>
+          <input id="peopleSearch" placeholder="Type a name…" />
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid" style="grid-template-columns: 1fr; gap:12px;">
+        <div class="card" style="padding:12px;">
+          <h3 style="margin:0 0 8px;font-size:14px;">Add person</h3>
+          <div class="row wrap">
+            <div style="flex:1; min-width:220px;">
+              <label>Name</label>
+              <input id="pName" placeholder="e.g., Mom, Alex, Sam…" />
+            </div>
+            <div style="flex:1; min-width:160px;">
+              <label>Relationship</label>
+              <input id="pRel" placeholder="family / friend / coworker…" />
+            </div>
+          </div>
+          <div class="row wrap" style="margin-top:10px;">
+            <div style="flex:1; min-width:160px;">
+              <label>Birthday (optional)</label>
+              <input id="pBday" type="date" />
+            </div>
+            <div style="flex:1; min-width:220px;">
+              <label>Gift style / interests (optional)</label>
+              <input id="pNotes" placeholder="likes: books, cooking, plants…" />
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary" id="pSave">Save person</button>
+          </div>
+        </div>
+
+        <div class="card" style="padding:12px;">
+          <h3 style="margin:0 0 8px;font-size:14px;">People list</h3>
+          <div id="peopleList" class="list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px; display:none;" id="personDetailCard"></div>
+  </section>
+
+  <!-- GIFTS -->
+  <section id="view-gifts" style="display:none;">
+    <div class="card">
+      <div class="row wrap">
+        <div style="flex:1;">
+          <h2 style="margin:0;font-size:16px;">Gifts</h2>
+          <div class="muted">Track ideas → planned → bought → given.</div>
+        </div>
+        <div style="flex:1; min-width:220px;">
+          <label>Status</label>
+          <select id="giftStatusFilter">
+            <option value="all">All</option>
+            <option value="idea">Idea</option>
+            <option value="planned">Planned</option>
+            <option value="bought">Bought</option>
+            <option value="given">Given</option>
+          </select>
+        </div>
+        <div style="flex:1; min-width:220px;">
+          <label>Search</label>
+          <input id="giftSearch" placeholder="Search people / notes…" />
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div id="giftList" class="list"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ---------- Storage ----------
+  const KEY = "giftTracker.v1";
+  const load = () => JSON.parse(localStorage.getItem(KEY) || '{"people":[],"gifts":[]}');
+  const save = (data) => localStorage.setItem(KEY, JSON.stringify(data));
+
+  // ---------- Helpers ----------
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const fmtMoney = (n) => {
+    const v = Number(n || 0);
+    return v.toLocaleString(undefined, { style: "currency", currency: "USD" });
+  };
+  const todayISO = () => new Date().toISOString().slice(0,10);
+  const parseISO = (s) => s ? new Date(s + "T00:00:00") : null;
+
+  function nextBirthdayDate(bdayISO){
+    if(!bdayISO) return null;
+    const b = parseISO(bdayISO);
+    if(!b) return null;
+    const now = new Date();
+    const y = now.getFullYear();
+    const candidate = new Date(y, b.getMonth(), b.getDate());
+    if(candidate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+      return new Date(y+1, b.getMonth(), b.getDate());
+    }
+    return candidate;
+  }
+
+  function daysUntil(dateObj){
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    const ms = end - start;
+    return Math.round(ms / (1000*60*60*24));
+  }
+
+  function statusPill(status){
+    const map = {
+      idea: ["Idea","info"],
+      planned: ["Planned","warn"],
+      bought: ["Bought","warn"],
+      given: ["Given","ok"]
+    };
+    const [label, cls] = map[status] || ["","info"];
+    return `<span class="pill ${cls}">${label}</span>`;
+  }
+
+  // ---------- UI refs ----------
+  const tabs = document.querySelectorAll(".tab");
+  const views = {
+    dashboard: document.getElementById("view-dashboard"),
+    people: document.getElementById("view-people"),
+    gifts: document.getElementById("view-gifts"),
+  };
+
+  const upcomingWindow = document.getElementById("upcomingWindow");
+  const upcomingList = document.getElementById("upcomingList");
+
+  const qaPerson = document.getElementById("qaPerson");
+  const qaOccasion = document.getElementById("qaOccasion");
+  const qaNote = document.getElementById("qaNote");
+  const qaDate = document.getElementById("qaDate");
+  const qaCost = document.getElementById("qaCost");
+  const qaLink = document.getElementById("qaLink");
+  const qaSave = document.getElementById("qaSave");
+
+  const kpiGifts = document.getElementById("kpiGifts");
+  const kpiSpent = document.getElementById("kpiSpent");
+  const kpiIdeas = document.getElementById("kpiIdeas");
+
+  const pName = document.getElementById("pName");
+  const pRel = document.getElementById("pRel");
+  const pBday = document.getElementById("pBday");
+  const pNotes = document.getElementById("pNotes");
+  const pSave = document.getElementById("pSave");
+  const peopleList = document.getElementById("peopleList");
+  const peopleSearch = document.getElementById("peopleSearch");
+  const personDetailCard = document.getElementById("personDetailCard");
+
+  const giftList = document.getElementById("giftList");
+  const giftStatusFilter = document.getElementById("giftStatusFilter");
+  const giftSearch = document.getElementById("giftSearch");
+
+  // ---------- Render ----------
+  function renderAll(){
+    const data = load();
+    renderPersonDropdown(data);
+    renderUpcoming(data);
+    renderKPIs(data);
+    renderPeople(data);
+    renderGifts(data);
+  }
+
+  function renderPersonDropdown(data){
+    const opts = data.people
+      .slice()
+      .sort((a,b)=>a.name.localeCompare(b.name))
+      .map(p => `<option value="${p.id}">${p.name}</option>`)
+      .join("");
+    qaPerson.innerHTML = opts || `<option value="">Add a person first</option>`;
+  }
+
+  function renderUpcoming(data){
+    const win = Number(upcomingWindow.value || 60);
+    const items = [];
+
+    // Birthdays
+    for(const p of data.people){
+      const nb = nextBirthdayDate(p.birthday);
+      if(nb){
+        const d = daysUntil(nb);
+        if(d >= 0 && d <= win){
+          items.push({
+            sort: d,
+            title: `${p.name} — Birthday`,
+            meta: `${nb.toLocaleDateString()} • in ${d} day${d===1?"":"s"}`,
+            kind: "birthday",
+            personId: p.id
+          });
+        }
+      }
+    }
+
+    // Gift target dates
+    for(const g of data.gifts){
+      if(g.targetDate){
+        const dt = parseISO(g.targetDate);
+        const d = daysUntil(dt);
+        if(d >= 0 && d <= win && g.status !== "given"){
+          const p = data.people.find(x=>x.id===g.personId);
+          items.push({
+            sort: d,
+            title: `${p?.name || "Unknown"} — ${g.occasion}`,
+            meta: `${g.targetDate} • ${statusPill(g.status)} • ${d} day${d===1?"":"s"} left`,
+            kind: "gift",
+            giftId: g.id
+          });
+        }
+      }
+    }
+
+    items.sort((a,b)=>a.sort-b.sort);
+
+    if(items.length === 0){
+      upcomingList.innerHTML = `<div class="muted">Nothing coming up in the next ${win} days.</div>`;
+      return;
+    }
+
+    upcomingList.innerHTML = items.map(it => `
+      <div class="item">
+        <h3>${it.title}</h3>
+        <div class="muted">${it.meta}</div>
+        <div class="actions">
+          ${it.kind==="birthday" ? `<button onclick="openPerson('${it.personId}')">View</button>` : ""}
+          ${it.kind==="gift" ? `<button onclick="openGift('${it.giftId}')">View</button>` : ""}
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function renderKPIs(data){
+    const year = new Date().getFullYear();
+    const giftsThisYear = data.gifts.filter(g => (g.dateCreated||"").startsWith(String(year))).length;
+
+    const spent = data.gifts
+      .filter(g => g.status === "given" && (g.givenDate||"").startsWith(String(year)))
+      .reduce((sum,g)=> sum + Number(g.cost||0), 0);
+
+    const ideas = data.gifts.filter(g => g.status === "idea").length;
+
+    kpiGifts.textContent = giftsThisYear;
+    kpiSpent.textContent = fmtMoney(spent);
+    kpiIdeas.textContent = ideas;
+  }
+
+  function renderPeople(data){
+    const q = (peopleSearch.value || "").trim().toLowerCase();
+    const people = data.people
+      .filter(p => !q || p.name.toLowerCase().includes(q) || (p.relationship||"").toLowerCase().includes(q))
+      .sort((a,b)=>a.name.localeCompare(b.name));
+
+    if(people.length === 0){
+      peopleList.innerHTML = `<div class="muted">No people yet. Add one above.</div>`;
+      return;
+    }
+
+    peopleList.innerHTML = people.map(p => {
+      const nb = nextBirthdayDate(p.birthday);
+      const bdayText = nb ? `Next birthday: ${nb.toLocaleDateString()} (${daysUntil(nb)}d)` : "No birthday set";
+      const y = new Date().getFullYear();
+      const spent = data.gifts
+        .filter(g => g.personId===p.id && g.status==="given" && (g.givenDate||"").startsWith(String(y)))
+        .reduce((s,g)=> s + Number(g.cost||0), 0);
+      return `
+        <div class="item">
+          <div class="row">
+            <div style="flex:1;">
+              <h3>${p.name}</h3>
+              <div class="muted">${p.relationship ? p.relationship + " • " : ""}${bdayText}</div>
+              ${p.notes ? `<div class="muted" style="margin-top:6px;">${p.notes}</div>` : ""}
+              <div class="muted" style="margin-top:6px;">Spent this year: ${fmtMoney(spent)}</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button onclick="openPerson('${p.id}')">Open</button>
+            <button class="danger" onclick="deletePerson('${p.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderGifts(data){
+    const status = giftStatusFilter.value;
+    const q = (giftSearch.value || "").trim().toLowerCase();
+
+    const list = data.gifts
+      .slice()
+      .sort((a,b)=> (b.dateCreated||"").localeCompare(a.dateCreated||""))
+      .filter(g => status==="all" || g.status===status)
+      .filter(g => {
+        if(!q) return true;
+        const p = data.people.find(x=>x.id===g.personId);
+        return (p?.name||"").toLowerCase().includes(q) ||
+               (g.occasion||"").toLowerCase().includes(q) ||
+               (g.note||"").toLowerCase().includes(q);
+      });
+
+    if(list.length === 0){
+      giftList.innerHTML = `<div class="muted">No gifts found.</div>`;
+      return;
+    }
+
+    giftList.innerHTML = list.map(g => {
+      const p = data.people.find(x=>x.id===g.personId);
+      return `
+        <div class="item">
+          <h3>${p?.name || "Unknown"} — ${g.occasion}</h3>
+          <div class="row wrap" style="gap:8px; margin-bottom:6px;">
+            ${statusPill(g.status)}
+            ${g.targetDate ? `<span class="pill">${g.targetDate}</span>` : ""}
+            ${g.cost ? `<span class="pill">${fmtMoney(g.cost)}</span>` : ""}
+          </div>
+          <div class="muted">${(g.note||"").replaceAll("\n","<br/>")}</div>
+          ${g.link ? `<div class="muted" style="margin-top:8px;"><a href="${g.link}" target="_blank" rel="noopener">Open link</a></div>` : ""}
+          <div class="actions">
+            <button onclick="cycleStatus('${g.id}')">Next status</button>
+            ${g.status!=="given" ? `<button onclick="markGiven('${g.id}')">Mark given</button>` : ""}
+            <button class="danger" onclick="deleteGift('${g.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // ---------- Actions ----------
+  qaDate.value = todayISO();
+
+  qaSave.addEventListener("click", () => {
+    const data = load();
+    if(!qaPerson.value){
+      alert("Add a person first.");
+      return;
+    }
+    const g = {
+      id: uid(),
+      personId: qaPerson.value,
+      occasion: qaOccasion.value,
+      note: qaNote.value.trim(),
+      targetDate: qaDate.value || "",
+      cost: qaCost.value || "",
+      link: qaLink.value.trim(),
+      status: "idea",
+      dateCreated: new Date().toISOString(),
+      givenDate: ""
+    };
+    data.gifts.push(g);
+    save(data);
+    qaNote.value = "";
+    qaCost.value = "";
+    qaLink.value = "";
+    renderAll();
+    alert("Saved.");
+  });
+
+  pSave.addEventListener("click", () => {
+    const data = load();
+    const name = pName.value.trim();
+    if(!name){ alert("Name is required."); return; }
+    data.people.push({
+      id: uid(),
+      name,
+      relationship: pRel.value.trim(),
+      birthday: pBday.value || "",
+      notes: pNotes.value.trim()
+    });
+    save(data);
+    pName.value = ""; pRel.value=""; pBday.value=""; pNotes.value="";
+    renderAll();
+  });
+
+  window.deletePerson = (personId) => {
+    if(!confirm("Delete this person and all their gifts?")) return;
+    const data = load();
+    data.people = data.people.filter(p => p.id !== personId);
+    data.gifts = data.gifts.filter(g => g.personId !== personId);
+    save(data);
+    personDetailCard.style.display = "none";
+    renderAll();
+  };
+
+  window.deleteGift = (giftId) => {
+    if(!confirm("Delete this gift?")) return;
+    const data = load();
+    data.gifts = data.gifts.filter(g => g.id !== giftId);
+    save(data);
+    renderAll();
+  };
+
+  window.cycleStatus = (giftId) => {
+    const data = load();
+    const g = data.gifts.find(x=>x.id===giftId);
+    if(!g) return;
+    const order = ["idea","planned","bought","given"];
+    const idx = order.indexOf(g.status);
+    g.status = order[Math.min(idx+1, order.length-1)];
+    if(g.status==="given") g.givenDate = todayISO();
+    save(data);
+    renderAll();
+  };
+
+  window.markGiven = (giftId) => {
+    const data = load();
+    const g = data.gifts.find(x=>x.id===giftId);
+    if(!g) return;
+    g.status = "given";
+    g.givenDate = todayISO();
+    save(data);
+    renderAll();
+  };
+
+  window.openPerson = (personId) => {
+    // Jump to People tab and show details card
+    setView("people");
+    const data = load();
+    const p = data.people.find(x=>x.id===personId);
+    if(!p) return;
+
+    const gifts = data.gifts
+      .filter(g=>g.personId===personId)
+      .sort((a,b)=>(b.dateCreated||"").localeCompare(a.dateCreated||""));
+
+    personDetailCard.style.display = "block";
+    personDetailCard.innerHTML = `
+      <h2 style="margin:0 0 6px;font-size:16px;">${p.name}</h2>
+      <div class="muted">${p.relationship || ""}</div>
+      ${p.birthday ? `<div class="muted" style="margin-top:6px;">Birthday: ${p.birthday}</div>` : ""}
+      ${p.notes ? `<div class="muted" style="margin-top:6px;">Notes: ${p.notes}</div>` : ""}
+      <div class="divider"></div>
+      <h3 style="margin:0 0 8px;font-size:14px;">Gift history</h3>
+      <div class="list">
+        ${gifts.length ? gifts.map(g=>`
+          <div class="item">
+            <div class="row wrap" style="gap:8px;">
+              <strong style="font-size:13px;">${g.occasion}</strong>
+              ${statusPill(g.status)}
+              ${g.cost ? `<span class="pill">${fmtMoney(g.cost)}</span>` : ""}
+              ${g.targetDate ? `<span class="pill">${g.targetDate}</span>` : ""}
+            </div>
+            ${g.note ? `<div class="muted" style="margin-top:6px;">${g.note.replaceAll("\n","<br/>")}</div>` : ""}
+            ${g.link ? `<div class="muted" style="margin-top:6px;"><a href="${g.link}" target="_blank" rel="noopener">Open link</a></div>` : ""}
+            <div class="actions">
+              <button onclick="cycleStatus('${g.id}')">Next status</button>
+              <button class="danger" onclick="deleteGift('${g.id}')">Delete</button>
+            </div>
+          </div>
+        `).join("") : `<div class="muted">No gifts yet.</div>`}
+      </div>
+    `;
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  };
+
+  window.openGift = (giftId) => {
+    setView("gifts");
+    // Soft highlight by putting search token
+    const data = load();
+    const g = data.gifts.find(x=>x.id===giftId);
+    if(!g) return;
+    const p = data.people.find(x=>x.id===g.personId);
+    giftSearch.value = p?.name || "";
+    renderGifts(data);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  function setView(name){
+    for(const t of tabs) t.classList.toggle("active", t.dataset.view===name);
+    for(const k of Object.keys(views)) views[k].style.display = (k===name) ? "" : "none";
+    // Close detail if leaving people
+    if(name !== "people") personDetailCard.style.display = "none";
+  }
+
+  tabs.forEach(t => t.addEventListener("click", () => { setView(t.dataset.view); }));
+
+  upcomingWindow.addEventListener("change", renderAll);
+  peopleSearch.addEventListener("input", renderAll);
+  giftStatusFilter.addEventListener("change", renderAll);
+  giftSearch.addEventListener("input", renderAll);
+
+  // ---------- Import/Export ----------
+  document.getElementById("exportJson").addEventListener("click", () => {
+    const data = load();
+    const blob = new Blob([JSON.stringify(data,null,2)], { type:"application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "gift-tracker-backup.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  const importFile = document.getElementById("importFile");
+  document.getElementById("importJson").addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if(!file) return;
+    const text = await file.text();
+    try{
+      const parsed = JSON.parse(text);
+      if(!parsed.people || !parsed.gifts) throw new Error("Invalid format");
+      save(parsed);
+      renderAll();
+      alert("Imported.");
+    } catch(err){
+      alert("Could not import that file.");
+    } finally {
+      importFile.value = "";
+    }
+  });
+
+  // ---------- Demo Data ----------
+  document.getElementById("addDemo").addEventListener("click", () => {
+    const data = load();
+    if(data.people.length || data.gifts.length){
+      if(!confirm("You already have data. Add demo data anyway?")) return;
+    }
+    const a = { id: uid(), name:"Mom", relationship:"family", birthday:"1970-04-12", notes:"likes gardening + mystery novels" };
+    const b = { id: uid(), name:"Alex", relationship:"friend", birthday:"1991-09-02", notes:"coffee nerd, hates clutter" };
+    const c = { id: uid(), name:"Justine", relationship:"partner", birthday:"1992-01-28", notes:"museum dates, cozy socks, photobooks" };
+    data.people.push(a,b,c);
+    data.gifts.push(
+      { id: uid(), personId:a.id, occasion:"Birthday", note:"Nice pruning shears + plant pot", targetDate:"", cost:"42", link:"", status:"idea", dateCreated:new Date().toISOString(), givenDate:"" },
+      { id: uid(), personId:b.id, occasion:"Holiday", note:"Local roaster sampler pack (link)", targetDate:"", cost:"28", link:"", status:"planned", dateCreated:new Date().toISOString(), givenDate:"" },
+      { id: uid(), personId:c.id, occasion:"Anniversary", note:"Photobook of last year + handwritten note", targetDate:"", cost:"0", link:"", status:"bought", dateCreated:new Date().toISOString(), givenDate:"" }
+    );
+    save(data);
+    renderAll();
+  });
+
+  // Initial
+  renderAll();
+</script>
+</body>
+</html>
